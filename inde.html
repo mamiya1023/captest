@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gacha List</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      background: #f7f9fc;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 20px;
+    }
+
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    input, select, button {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+
+    #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      width: 90%;
+      max-width: 1200px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      text-align: center;
+      transition: transform 0.2s;
+    }
+
+    .card:hover { transform: scale(1.03); }
+
+    .card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: #f0f0f0;
+    }
+
+    .card-title {
+      padding: 10px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    #pagination {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .page-btn {
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      background: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .page-btn.active {
+      background: #007bff;
+      color: white;
+    }
+
+    .page-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #count {
+      margin: 10px;
+      font-weight: bold;
+    }
+
+    /* ローディングスピナー */
+    #loader {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255,255,255,0.8);
+      z-index: 1000;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease, visibility 0.3s;
+    }
+
+    #loader.active {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #007bff;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Gacha Collection</h1>
+  </header>
+
+  <div id="controls">
+    <input type="text" id="searchInput" placeholder="キーワード検索" />
+    <button id="searchBtn">検索</button>
+    <select id="makerFilter">
+      <option value="">すべてのメーカー</option>
+    </select>
+  </div>
+
+  <div id="count"></div>
+  <div id="gallery"></div>
+  <div id="pagination"></div>
+
+  <div id="loader"><div class="spinner"></div></div>
+
+  <script>
+    // ------------------------------------------------------
+    // 設定
+    // ------------------------------------------------------
+    const SHEET_ID = "1JG_vDvFlmQgbgQFSmhrktBrnBm-5b6nLQ8s0oTJBNqg";
+    const SHEET_NAMES = [
+      "gashapon","benefice","Qualia","kitan","fukuya","SKjapan","ulcap",
+      "bushicap","rainbow","yell","studioSota","toys","spirits",
+      "naturetechnicolour","tarlin","peanutclub","yumeya","jdream",
+      "amufun","hma","kcom","k2ste","kenelestore"
+    ];
+    const ITEMS_PER_PAGE = 50;
+    let allData = [];
+    let filteredData = [];
+    let currentPage = 1;
+
+    const loader = document.getElementById("loader");
+    const countEl = document.getElementById("count");
+
+    // ------------------------------------------------------
+    // ローディング表示
+    // ------------------------------------------------------
+    function showLoader() {
+      loader.classList.add("active");
+    }
+    function hideLoader() {
+      loader.classList.remove("active");
+    }
+
+    // ------------------------------------------------------
+    // データ取得（列自動検出）
+    // ------------------------------------------------------
+    async function fetchSheet(sheetName) {
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+      const res = await fetch(url);
+      const text = await res.text();
+      const jsonText = text.match(/(?<=\().*(?=\);)/s)[0];
+      const data = JSON.parse(jsonText);
+
+      const headers = data.table.cols.map(c => (c.label || "").trim().toLowerCase());
+      const findCol = (keys) => headers.find(h => keys.some(k => h.includes(k)));
+
+      const titleKey = findCol(["タイトル", "title", "商品名", "name"]);
+      const titleUrlKey = findCol(["タイトルurl", "title url", "url", "リンク", "link"]);
+      const imgKey = findCol(["画像", "image", "img"]);
+
+      return data.table.rows.map(r => {
+        const row = {};
+        headers.forEach((h, i) => row[h] = r.c[i]?.v || "");
+        return {
+          maker: sheetName,
+          title: row[titleKey] || "",
+          titleUrl: row[titleUrlKey] || "",
+          image: row[imgKey] || ""
+        };
+      });
+    }
+
+    // ------------------------------------------------------
+    // 全シート読み込み
+    // ------------------------------------------------------
+    async function loadAllSheets() {
+      showLoader();
+      const all = [];
+      for (const name of SHEET_NAMES) {
+        try {
+          const rows = await fetchSheet(name);
+          all.push(...rows);
+        } catch (e) {
+          console.warn(name, "読み込み失敗", e);
+        }
+      }
+      allData = all;
+      filteredData = all;
+      populateMakerFilter();
+      render();
+      hideLoader();
+    }
+
+    // ------------------------------------------------------
+    // メーカー選択肢生成
+    // ------------------------------------------------------
+    function populateMakerFilter() {
+      const makerFilter = document.getElementById("makerFilter");
+      SHEET_NAMES.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        makerFilter.appendChild(opt);
+      });
+    }
+
+    // ------------------------------------------------------
+    // 表示レンダリング
+    // ------------------------------------------------------
+    function render() {
+      const gallery = document.getElementById("gallery");
+      const query = document.getElementById("searchInput").value.trim().toLowerCase();
+      const selectedMaker = document.getElementById("makerFilter").value;
+
+      filteredData = allData.filter(item => {
+        const matchText = !query || item.title.toLowerCase().includes(query);
+        const matchMaker = !selectedMaker || item.maker === selectedMaker;
+        return matchText && matchMaker;
+      });
+
+      const total = filteredData.length;
+      countEl.textContent = `全 ${total} 件`;
+
+      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      const pageData = filteredData.slice(start, end);
+
+      gallery.innerHTML = pageData
+        .filter(item => item.title || item.titleUrl || item.image)
+        .map(item => renderCard(item))
+        .join("");
+
+      renderPagination(total);
+    }
+
+    // ------------------------------------------------------
+    // カード生成（条件ごと）
+    // ------------------------------------------------------
+    function renderCard(item) {
+      const { title, titleUrl, image } = item;
+      // 3つ全て
+      if (title && titleUrl && image)
+        return `<div class="card"><a href="${titleUrl}" target="_blank"><img src="${image}" alt="${title}"><div class="card-title">${title}</div></a></div>`;
+      // タイトル＋URLのみ
+      if (title && titleUrl && !image)
+        return `<div class="card"><a href="${titleUrl}" target="_blank"><div class="card-title">${title}</div></a></div>`;
+      // 画像＋URLのみ
+      if (!title && titleUrl && image)
+        return `<div class="card"><a href="${titleUrl}" target="_blank"><img src="${image}" alt=""></a></div>`;
+      // タイトルのみ
+      if (title && !titleUrl && !image)
+        return `<div class="card"><div class="card-title">${title}</div></div>`;
+      // 画像のみ
+      if (image && !title && !titleUrl)
+        return `<div class="card"><img src="${image}" alt=""></div>`;
+      return "";
+    }
+
+    // ------------------------------------------------------
+    // ページネーション（5ページ＋ナビ）
+    // ------------------------------------------------------
+    function renderPagination(total) {
+      const pagination = document.getElementById("pagination");
+      pagination.innerHTML = "";
+      const pageCount = Math.ceil(total / ITEMS_PER_PAGE);
+
+      const makeBtn = (label, page) => {
+        const btn = document.createElement("button");
+        btn.textContent = label;
+        btn.className = "page-btn";
+        btn.disabled = page < 1 || page > pageCount || page === currentPage;
+        btn.onclick = () => { currentPage = page; render(); };
+        pagination.appendChild(btn);
+      };
+
+      makeBtn("⏮", 1);
+      makeBtn("◀", currentPage - 1);
+
+      let start = Math.max(1, currentPage - 2);
+      let end = Math.min(pageCount, start + 4);
+      if (end - start < 4) start = Math.max(1, end - 4);
+
+      for (let i = start; i <= end; i++) {
+        const btn = document.createElement("button");
+        btn.textContent = i;
+        btn.className = "page-btn" + (i === currentPage ? " active" : "");
+        btn.onclick = () => { currentPage = i; render(); };
+        pagination.appendChild(btn);
+      }
+
+      makeBtn("▶", currentPage + 1);
+      makeBtn("⏭", pageCount);
+    }
+
+    // ------------------------------------------------------
+    // イベント
+    // ------------------------------------------------------
+    document.getElementById("searchBtn").addEventListener("click", () => {
+      currentPage = 1; render();
+    });
+    document.getElementById("makerFilter").addEventListener("change", () => {
+      currentPage = 1; render();
+    });
+    document.getElementById("searchInput").addEventListener("keypress", e => {
+      if (e.key === "Enter") { currentPage = 1; render(); }
+    });
+
+    // ------------------------------------------------------
+    // 実行
+    // ------------------------------------------------------
+    loadAllSheets();
+  </script>
+</body>
+</html>
