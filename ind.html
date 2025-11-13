@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>カプセルトイの街</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="sty.css">
+</head>
+<body>
+  <h1>カプセルトイの街</h1>
+  <p>商品検索ページ</p>
+
+  <!-- 🔍 検索・フィルター -->
+  <div class="search-container">
+    <select id="makerFilter">
+      <option value="">すべてのメーカー</option>
+    </select>
+    <input id="searchInput" type="text" placeholder="商品検索 例: 犬・カービィなど">
+    <button id="searchBtn">検索</button>
+  </div>
+
+  <!-- 🖼 画像一覧 -->
+  <div id="gallery"></div>
+
+  <!-- 📄 ページネーション -->
+  <div id="pagination"></div>
+
+  <!-- 📨 お問い合わせボタン -->
+  <a href="contact.html" id="contactBtn">お問い合わせ</a>
+
+  <!-- 👁️ 閲覧数 -->
+  <p id="viewCount"></p>
+
+  <script src="scr.js"></script>
+</body>
+</html>
