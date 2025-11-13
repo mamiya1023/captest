@@ -14,7 +14,7 @@ let filteredData = [];
 let currentPage = 1;
 
 //------------------------------------------------------
-// シート読み込み
+// シートからデータ取得（列自動検出）
 //------------------------------------------------------
 async function fetchSheet(sheetName) {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
@@ -25,13 +25,14 @@ async function fetchSheet(sheetName) {
 
   if (!data.table.rows.length) return [];
 
-  const headers = data.table.cols.map(c => (c.label || "").trim());
-  const getColumn = (candidates) =>
-    headers.find(h => candidates.some(c => h.toLowerCase().includes(c)));
+  const headers = data.table.cols.map(c => (c.label || "").trim().toLowerCase());
 
-  const titleKey = getColumn(["タイトル", "商品名", "title", "name"]);
-  const imgKey = getColumn(["画像", "image", "img"]);
-  const urlKey = getColumn(["url", "リンク", "link"]);
+  const findColumn = (keywords) =>
+    headers.find(h => keywords.some(k => h.includes(k)));
+
+  const titleKey = findColumn(["タイトル", "title", "商品名", "name"]);
+  const titleUrlKey = findColumn(["タイトルurl", "title url", "url", "リンク", "link"]);
+  const imgKey = findColumn(["画像", "image", "img", "picture"]);
 
   return data.table.rows.map(r => {
     const row = {};
@@ -39,8 +40,8 @@ async function fetchSheet(sheetName) {
     return {
       maker: sheetName,
       title: row[titleKey] || "",
-      image: row[imgKey] || "",
-      link: row[urlKey] || ""
+      titleUrl: row[titleUrlKey] || "",
+      image: row[imgKey] || ""
     };
   });
 }
@@ -65,7 +66,7 @@ async function loadAllSheets() {
 }
 
 //------------------------------------------------------
-// メーカー選択肢を自動生成
+// メーカー選択肢を生成
 //------------------------------------------------------
 function populateMakerFilter() {
   const makerFilter = document.getElementById("makerFilter");
@@ -78,13 +79,14 @@ function populateMakerFilter() {
 }
 
 //------------------------------------------------------
-// 表示処理
+// 表示
 //------------------------------------------------------
 function render() {
   const gallery = document.getElementById("gallery");
   const query = document.getElementById("searchInput").value.trim().toLowerCase();
   const selectedMaker = document.getElementById("makerFilter").value;
 
+  // フィルター処理
   filteredData = allData.filter(item => {
     const matchText = !query || item.title.toLowerCase().includes(query);
     const matchMaker = !selectedMaker || item.maker === selectedMaker;
@@ -96,20 +98,73 @@ function render() {
   const end = start + ITEMS_PER_PAGE;
   const pageData = filteredData.slice(start, end);
 
-  gallery.innerHTML = pageData.map(item => `
-    <div class="card">
-      <a href="${item.link || '#'}" target="_blank" rel="noopener noreferrer">
-        <img src="${item.image || 'noimage.png'}" alt="${item.title}">
-      </a>
-      <div class="card-title">${item.title}</div>
-    </div>
-  `).join("");
+  // HTML生成
+  gallery.innerHTML = pageData
+    .filter(item => item.title || item.titleUrl || item.image) // 何か1つでもあるものだけ表示
+    .map(item => renderCard(item))
+    .join("");
 
   renderPagination(total);
 }
 
 //------------------------------------------------------
-// ページネーション（5ページ範囲 + ナビ付き）
+// 各カード生成（条件分岐対応）
+//------------------------------------------------------
+function renderCard(item) {
+  const { title, titleUrl, image } = item;
+
+  // ① 全部ある場合
+  if (title && titleUrl && image) {
+    return `
+      <div class="card">
+        <a href="${titleUrl}" target="_blank" rel="noopener noreferrer">
+          <img src="${image}" alt="${title}">
+          <div class="card-title">${title}</div>
+        </a>
+      </div>`;
+  }
+
+  // ② タイトル + URLのみ
+  if (title && titleUrl && !image) {
+    return `
+      <div class="card text-only">
+        <a href="${titleUrl}" target="_blank" rel="noopener noreferrer">
+          <div class="card-title">${title}</div>
+        </a>
+      </div>`;
+  }
+
+  // ③ 画像 + URLのみ
+  if (!title && titleUrl && image) {
+    return `
+      <div class="card">
+        <a href="${titleUrl}" target="_blank" rel="noopener noreferrer">
+          <img src="${image}" alt="">
+        </a>
+      </div>`;
+  }
+
+  // ④ タイトルのみ
+  if (title && !titleUrl && !image) {
+    return `
+      <div class="card text-only">
+        <div class="card-title">${title}</div>
+      </div>`;
+  }
+
+  // ⑤ 画像のみ
+  if (image && !title && !titleUrl) {
+    return `
+      <div class="card">
+        <img src="${image}" alt="">
+      </div>`;
+  }
+
+  return ""; // 該当なし
+}
+
+//------------------------------------------------------
+// ページネーション（5ページ + ナビ）
 //------------------------------------------------------
 function renderPagination(total) {
   const pagination = document.getElementById("pagination");
