@@ -1,0 +1,116 @@
+body {
+  font-family: "Noto Sans JP", sans-serif;
+  background: #f5f5f5;
+  padding: 1em;
+  margin: 0;
+  color: #333;
+  text-align: center;
+}
+
+h1 {
+  font-size: 1.8em;
+  margin-bottom: 0.3em;
+}
+
+.search-container {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px auto;
+  max-width: 500px;
+}
+
+.search-container input {
+  flex: 1;
+  padding: 10px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.search-container button {
+  padding: 10px 20px;
+  font-size: 1em;
+  background: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.search-container button:hover {
+  background: #27ae60;
+}
+
+#gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: scale(1.03);
+}
+
+.card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+#pagination {
+  margin: 20px 0;
+}
+
+.page-btn {
+  margin: 3px;
+  padding: 6px 10px;
+  border: none;
+  background: #e0e0e0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.page-btn.active {
+  background: #3498db;
+  color: white;
+}
+
+#contactBtn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: #e67e22;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 30px;
+  text-decoration: none;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 1001;
+}
+
+#contactBtn:hover {
+  background: #d35400;
+}
+
+#viewCount {
+  font-size: 14px;
+  color: #777;
+  margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+  #gallery {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+}

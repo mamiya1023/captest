@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>お問い合わせ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+      padding: 1em;
+      margin: 0;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.5em;
+      margin-bottom: 1em;
+    }
+
+    form, .confirmation, .result {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 500px;
+      margin: 0 auto;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input, textarea {
+      width: 95%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+
+    button {
+      background: #3498db;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .center {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>お問い合わせ</h1>
+
+  <form id="contactForm">
+    <label for="name">お名前</label>
+    <input type="text" id="name" name="名前" required>
+
+    <label for="email">メールアドレス</label>
+    <input type="email" id="email" name="メールアドレス" required>
+
+    <label for="message">お問い合わせ内容</label>
+    <textarea id="message" name="お問い合わせ内容" rows="5" required></textarea>
+
+    <div class="center">
+      <button type="submit">送信</button>
+    </div>
+  </form>
+  <div id="terms" class="confirmation hidden">
+  <h2>利用規約</h2>
+  <div style="height:150px; overflow:auto; border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+    <p>ここに利用規約の本文を入れます。長文でもスクロールできます。</p>
+    <p>・・・</p>
+  </div>
+  <label>
+    <input type="checkbox" id="agreeCheck"> 利用規約に同意します
+  </label>
+  <div class="center">
+    <button id="termsNext" disabled>次へ</button>
+  </div>
+</div>
+
+
+  <div id="confirmation" class="confirmation hidden">
+    <p>この内容で送信しますか？</p>
+    <div class="center">
+      <button id="confirmYes">はい</button>
+      <button id="confirmNo">いいえ</button>
+    </div>
+  </div>
+
+  <div id="result" class="result hidden center">
+    <p>送信しました。</p>
+    <button onclick="location.href='index.html'">ホーム画面に戻りますか</button>
+  </div>
+
+  <script>
+    const form = document.getElementById('contactForm');
+    const confirmation = document.getElementById('confirmation');
+    const result = document.getElementById('result');
+    const confirmYes = document.getElementById('confirmYes');
+    const confirmNo = document.getElementById('confirmNo');
+    const terms = document.getElementById('terms');
+const agreeCheck = document.getElementById('agreeCheck');
+const termsNext = document.getElementById('termsNext');
+
+form.addEventListener('submit', function(event) {
+  event.preventDefault();
+  form.classList.add('hidden');
+  terms.classList.remove('hidden'); // まず規約表示
+});
+
+agreeCheck.addEventListener('change', function() {
+  termsNext.disabled = !agreeCheck.checked; // チェックしないと進めない
+});
+
+termsNext.addEventListener('click', function() {
+  terms.classList.add('hidden');
+  confirmation.classList.remove('hidden'); // 規約→確認画面へ
+});
+
+
+    form.addEventListener('submit', function(event) {
+      event.preventDefault(); // フォームの通常送信を止める
+      form.classList.add('hidden');
+      confirmation.classList.remove('hidden');
+    });
+
+    confirmYes.addEventListener('click', function() {
+      confirmation.classList.add('hidden');
+      result.classList.remove('hidden');
+    });
+
+    confirmNo.addEventListener('click', function() {
+      confirmation.classList.add('hidden');
+      form.classList.remove('hidden');
+    });
+  </script>
+
+</body>
+</html>
